@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Lakes & Observations</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html,body,#map { height: 100%; margin: 0; padding: 0; }
+    #controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 1000;
+      background: rgba(255,255,255,0.9);
+      padding: 8px;
+      border-radius: 4px;
+      box-shadow: 0 1px 4px rgba(0,0,0,.3);
+      font-family: sans-serif;
+    }
+    #controls input { width: 150px; margin-bottom: 6px; display: block; }
+    .observation_list{  max-height: 350px;
+                        max-width: 800px;
+                        white-space: nowrap;
+                        overflow: scroll;
+                        padding-bottom: 12px; /* space above scrollbar */}
+
+    .obs-observation_list ul {
+    padding-left: 16px;
+    margin: 0;
+    }
+
+    .obs-observation_list li {
+    white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label>Species:
+      <input id="species" placeholder="e.g. Rainbow Trout" />
+    </label>
+    <label>Min length (inches):
+      <input id="min_length" type="number" step="0.1" placeholder="10" />
+    </label>
+    <button id="apply">Apply filter</button>
+    <button id="reset">Reset</button>
+  </div>
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

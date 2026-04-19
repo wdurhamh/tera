@@ -1,0 +1,19 @@
+ <template id="observation-form-template">
+  <form class="observation-form" style="display:flex; flex-wrap:wrap; gap:8px;">
+    <input type="date" name="date" required />
+    <input type="text" name="species" placeholder="Species" required />
+    <input type="number" name="count" placeholder="Count" />
+    <input type="number" step="0.01" name="length_min" placeholder="Min Len" />
+    <input type="number" step="0.01" name="length_max" placeholder="Max Len" />
+    <input type="number" step="0.01" name="length_avg" placeholder="Avg Len" />
+    <input type="text" name="notes" placeholder="Notes" />
+    <input type="text" name="source" placeholder="Source" />
+    <select name="type">
+      <option value="">Type</option>
+      <option value="survey">Survey</option>
+      <option value="angler">Angler</option>
+      <option value="stocking">Stocking</option>
+    </select>
+    <button type="submit">Add</button>
+  </form>
+</template>

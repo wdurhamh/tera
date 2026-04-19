@@ -1,0 +1,7 @@
+**/.ipynb_checkpoints/
+.tera
+**/__pycache__/
+*.geojson
+*.csv
+*.kml
+*.sqlite
