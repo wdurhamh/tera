@@ -6,31 +6,36 @@ L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapSe
   attribution: 'Tiles courtesy of the U.S. Geological Survey (USGS)'
 }).addTo(map);
 
+//some html constant strings
+const OBS_TABLE_HEADERS = `<div><strong>Date</strong></div>
+                            <div><strong>Species</strong></div>
+                            <div><strong>Count</strong></div>
+                            <div><strong>L, Max (In.)</strong></div>
+                            <div><strong>L, Avg (In.)</strong></div>
+                            <div><strong>L, Min (In.)</strong></div>
+                            <div><strong>Type</strong></div>
+                            <div><strong>Source</strong></div>
+                            <div><strong>Notes</strong></div>
+                            <div><strong>Action</strong></div>`;
 
+function linkifyUrls(text) {
+  const urlRegex = /(https?:\/\/[^\s<>"']*[^\s<>"'.,!?;:()])/g;
 
-function bowPopupContent(props, obs){
-    let content = `<div><strong>${props.name || 'Lake'}</strong>`;
-    content += `Elevation: ${props.elevation || '?'}</div>`;
-    content += `<div class="observation_list" id="bow_${props.id}_observations">`;
-      
-    content += `<div style="
+  return text.replace(urlRegex, (url) => {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">Link</a>`;
+  });
+}
+
+function observationTableContent(props, obs){
+  let content = `<div style="
                 display:grid;
                 grid-template-columns: 120px 80px 70px 90px 90px 90px 100px 80px 125px 1fr;
                 gap:6px;
                 font-size:14px;
-                ">
-                <div><strong>Date</strong></div>
-                <div><strong>Species</strong></div>
-                <div><strong>Count</strong></div>
-                <div><strong>L, Max (In.)</strong></div>
-                <div><strong>L, Avg (In.)</strong></div>
-                <div><strong>L, Min (In.)</strong></div>
-                <div><strong>Type</strong></div>
-                <div><strong>Source</strong></div>
-                <div><strong>Notes</strong></div>
-                <div><strong>Action</strong></div>`;
+                ">`;
+  content += OBS_TABLE_HEADERS;
 
-    content += `<div><input type="date" id="new-date" style="width:100%"></div>
+  content += `<div><input type="date" id="new-date" style="width:100%"></div>
         <div><input type="text" id="new-species" placeholder="Species" style="width:100%"></div>
         <div><input type="number" id="new-count" placeholder="Count" style="width:100%"></div>
         <div><input type="number" id="new-max" placeholder="Max" step="0.01" style="width:100%"></div>
@@ -40,7 +45,7 @@ function bowPopupContent(props, obs){
         <div><input type="text" id="new-source" placeholder="Source" style="width:100%"></div>
         <div><input type="text" id="new-notes" placeholder="Notes" style="width:70%"></div>
         <div><button onclick="addObservation(${props.id})">Add</button></div>`;
-    if (obs && obs.length > 0) {
+   if (obs && obs.length > 0) {
         obs.forEach(o => {
             let date_string = o.date_string ? o.date_string : "";
 
@@ -52,7 +57,7 @@ function bowPopupContent(props, obs){
             }
 
             
-
+            let source_str = linkifyUrls(o.source);
             content += `
                 <div>${date_string}</div>
                 <div><strong>${o.species}</strong></div>
@@ -61,18 +66,71 @@ function bowPopupContent(props, obs){
                 <div>${avg !== "NA" ? avg.toFixed(2) : avg}</div>
                 <div>${min !== "NA" ? min.toFixed(2) : min}</div>
                 <div>${o.type || ""}</div>
-                <div>${o.source || ""}</div>
-                <div>${o.notes || ""}</div>
+                <div>${source_str}</div>
+                <div class="observation_notes">${o.notes || ""}</div>
                 <div><button onclick="editObservation(${o.id})">Edit</button><button onclick="rmvObservation(${o.id})">-</button></div>
             `;
         });
     }
     
     content += '</div>'; 
+    return content;
+}
+
+function bowPopupContent(props, obs){
+    let content = `<div><strong>${props.name || 'Lake'}</strong>`;
+    content += ` Elevation: ${props.elevation || '?'}`
+    if (activePopupState && activePopupState.id === props.id && activePopupState.latlng) {
+      content += `<a href="https://forecast.weather.gov/MapClick.php?lon=${activePopupState.latlng.lng}&lat=${activePopupState.latlng.lat}" target="_blank">Go to Weather</a>`;
+    }
+    content+= `</div>`;
+    content += `<div class="observation_list" id="bow_${props.id}_observations">`;
+
+    content += observationTableContent(props, obs);
+
     content += '</div>';
     return content;
 }
 
+
+let activePopupState = null;
+
+function getLayerLatLng(layer) {
+  if (typeof layer.getLatLng === 'function') {
+    return layer.getLatLng();
+  }
+  if (typeof layer.getBounds === 'function') {
+    return layer.getBounds().getCenter();
+  }
+  return null;
+}
+
+function findLayerById(id) {
+  let found = null;
+  lakesLayer.eachLayer(layer => {
+    if (layer.feature && layer.feature.properties && layer.feature.properties.id === id) {
+      found = layer;
+    }
+  });
+  return found;
+}
+
+function reopenActivePopup() {
+  if (!activePopupState) {
+    return;
+  }
+  const layer = findLayerById(activePopupState.id);
+  if (layer) {
+    layer.openPopup();
+    return;
+  }
+  if (activePopupState.latlng && activePopupState.content) {
+    L.popup({maxWidth: '600px', minWidth: '200px'})
+      .setLatLng(activePopupState.latlng)
+      .setContent(activePopupState.content)
+      .openOn(map);
+  }
+}
 
 let lakesLayer = L.geoJSON(null, {
   style: {
@@ -81,13 +139,27 @@ let lakesLayer = L.geoJSON(null, {
     fillOpacity: 0.4
   },
   onEachFeature: function(feature, layer) {
+    const props = feature.properties || {};
+
+    layer.bindPopup(bowPopupContent(props, []), {maxWidth: '600px', minWidth: '200px'});
+
+    layer.on('popupopen', function(e) {
+      fetchObservations(props, e.popup);
+      activePopupState = {
+        id: props.id,
+        latlng: e.popup.getLatLng(),
+        content: e.popup.getContent()
+      };
+    });
+
+    layer.on('popupclose', function() {
+      if (activePopupState && activePopupState.id === props.id) {
+        activePopupState = null;
+      }
+    });
+
     layer.on('click', () => {
-      const props = feature.properties || {};
-      layer.once('popupopen', function(e) {
-        const popup = e.popup;
-        fetchObservations(props, popup);
-        });
-      layer.bindPopup(bowPopupContent(props, []), {maxWidth:"600px", minWidth:"200px"}).openPopup();
+      layer.openPopup();
     });
   }
 }).addTo(map);
@@ -109,6 +181,13 @@ async function rmvObservation(observation_id){
     .then(r => r.json())
     .then(response => {
       console.log(response);
+      const popup = map._popup;
+      if (popup && popup._content) {
+        const activeLayer = findLayerById(activePopupState?.id);
+        if (activeLayer) {
+          fetchObservations(activeLayer.feature.properties, popup);
+        }
+      }
     })
     .catch(err => {
       console.error(err);
@@ -149,16 +228,10 @@ async function addObservation(water_body_id) {
         const data = await response.json();
         console.log("Observation added:", data);
 
-        // optional: clear form after success
-        // document.getElementById("new-date").value = "";
-        // document.getElementById("new-species").value = "";
-        // document.getElementById("new-count").value = "";
-        // document.getElementById("new-max").value = "";
-        // document.getElementById("new-avg").value = "";
-        // document.getElementById("new-min").value = "";
-        // document.getElementById("new-type").value = "";
-        // document.getElementById("new-source").value = "";
-        // document.getElementById("new-notes").value = "";
+        const layer = findLayerById(water_body_id);
+        if (layer && layer.getPopup()) {
+          fetchObservations(layer.feature.properties, layer.getPopup());
+        }
 
     } catch (error) {
         console.error("Error adding observation:", error);
@@ -171,6 +244,12 @@ function fetchObservations(props, popup) {
     .then(r => r.json())
     .then(obs => {
       popup.setContent(bowPopupContent(props, obs));
+      if (activePopupState && activePopupState.id === props.id) {
+        activePopupState = {
+          ...activePopupState,
+          content: popup.getContent()
+        };
+      }
     })
     .catch(err => {
       console.error(err);
@@ -194,6 +273,7 @@ function checkAndLoadLakes() {
   // bbox order: minx,miny,maxx,maxy (west,south,east,north)
   const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].join(',');
   const params = buildParamsWithBbox(bbox);
+  const currentPopupState = activePopupState;
 
   showMessage('Checking visible lakes...');
 
@@ -218,6 +298,10 @@ function checkAndLoadLakes() {
           .then(fc => {
             lakesLayer.clearLayers();
             lakesLayer.addData(fc);
+            if (currentPopupState) {
+              activePopupState = currentPopupState;
+              reopenActivePopup();
+            }
             showMessage(`Showing ${count} lakes.`);
           })
           .catch(err => {
@@ -246,6 +330,11 @@ document.getElementById('reset').addEventListener('click', () => {
 
 // Re-check whenever the user moves/zooms the map
 map.on('moveend', () => {
+  checkAndLoadLakes();
+});
+
+// Re-check on resize too
+map.on('resize', () => {
   checkAndLoadLakes();
 });
 
