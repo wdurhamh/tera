@@ -270,6 +270,66 @@ def api_new_observation(water_body_id):
     return jsonify({"success":1})
 
 
+@app.route('/api/trails')
+def api_trails():
+    """Return trails as a GeoJSON FeatureCollection.
+    
+    Optional query params:
+      - bbox: minx,miny,maxx,maxy (optional bounding box to limit results)
+    """
+    bbox = request.args.get('bbox')
+
+    where_clauses = []
+    params = []
+
+    # bbox spatial filter
+    if bbox:
+        try:
+            minx, miny, maxx, maxy = map(float, bbox.split(','))
+            where_clauses.append('ST_Intersects(geometry, ST_MakeEnvelope(%s, %s, %s, %s, 4269))')
+            params.extend([minx, miny, maxx, maxy])
+        except Exception:
+            abort(400, description='invalid bbox, expected minx,miny,maxx,maxy')
+
+    where_clause = ('WHERE ' + ' AND '.join(where_clauses)) if where_clauses else ''
+
+    sql = f"""
+    SELECT name, trail_number, length, owner, state, source, id_in_source,
+           ST_AsGeoJSON(geometry) AS geom_json
+    FROM trails
+    {where_clause}
+    ORDER BY name
+    """
+
+    try:
+        rows = db_bridge.execute_query(sql, params)
+    except Exception as e:
+        app.logger.exception('DB error')
+        abort(500, description=str(e))
+
+    features = []
+    for r in rows:
+        geom = None
+        if r.get('geom_json'):
+            try:
+                geom = json.loads(r['geom_json'])
+            except Exception:
+                geom = None
+
+        # build properties excluding geometry
+        props = dict(r)
+        props.pop('geom_json', None)
+
+        feature = {
+            'type': 'Feature',
+            'geometry': geom,
+            'properties': props
+        }
+        features.append(feature)
+
+    fc = {'type': 'FeatureCollection', 'features': features}
+    return jsonify(fc)
+
 
 if __name__ == '__main__':
     # For development only. Use gunicorn/uwsgi in production.

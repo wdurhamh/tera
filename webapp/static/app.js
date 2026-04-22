@@ -164,6 +164,96 @@ let lakesLayer = L.geoJSON(null, {
   }
 }).addTo(map);
 
+let trailsLayer = L.geoJSON(null, {
+  style: {
+    color: '#ff7f00',
+    weight: 4,
+    opacity: 0.7,
+    fillOpacity: 0
+  },
+  onEachFeature: function(feature, layer) {
+    const props = feature.properties || {};
+    let popupContent = `<div class="popup-content"><strong>${props.name || 'Trail'}</strong><br>`;
+    popupContent += `Trail #: ${props.trail_number || 'N/A'}<br>`;
+    popupContent += `Length: ${props.length ? props.length.toFixed(2) + ' mi' : 'N/A'}<br>`;
+    popupContent += `Owner: ${props.owner || 'N/A'}<br>`;
+    
+    layer.bindPopup(popupContent, {maxWidth: '400px', minWidth: '200px'});
+    
+    layer.on('mouseover', function() {
+      this.setStyle({
+        weight: 6,
+        opacity: 1,
+        color: '#ff4500'
+      });
+      this.bringToFront();
+    });
+    
+    layer.on('mouseout', function() {
+      if (selectedTrail !== layer) {
+        this.setStyle({
+          weight: 4,
+          opacity: 0.7,
+          color: '#ff7f00'
+        });
+      }
+    });
+    
+    layer.on('click', (e) => {
+      // Deselect previous trail
+      if (selectedTrail) {
+        selectedTrail.setStyle({
+          weight: 4,
+          opacity: 0.7,
+          color: '#ff7f00'
+        });
+      }
+      
+      // Select new trail
+      selectedTrail = layer;
+      layer.setStyle({
+        weight: 6,
+        opacity: 1,
+        color: '#ff0000'
+      });
+      layer.bringToFront();
+      layer.openPopup();
+    });
+  }
+}).addTo(map);
+
+let selectedTrail = null;
+
+function checkAndLoadTrails() {
+  // Only load trails if zoom level is 8 or larger
+  const zoomLevel = map.getZoom();
+  if (zoomLevel < 8) {
+    trailsLayer.clearLayers();
+    selectedTrail = null;
+    return;
+  }
+
+  const b = map.getBounds();
+  // bbox order: minx,miny,maxx,maxy (west,south,east,north)
+  const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].join(',');
+
+  fetch('/api/trails?bbox=' + encodeURIComponent(bbox))
+    .then(r => {
+      if (!r.ok) throw new Error('Trails request failed');
+      return r.json();
+    })
+    .then(fc => {
+      trailsLayer.clearLayers();
+      selectedTrail = null;
+      if (fc.features && fc.features.length > 0) {
+        trailsLayer.addData(fc);
+      }
+    })
+    .catch(err => {
+      console.error('Error loading trails:', err);
+    });
+}
+
 function showMessage(msg) {
   let el = document.getElementById('status_message');
   if (!el) {
@@ -331,12 +421,15 @@ document.getElementById('reset').addEventListener('click', () => {
 // Re-check whenever the user moves/zooms the map
 map.on('moveend', () => {
   checkAndLoadLakes();
+  checkAndLoadTrails();
 });
 
 // Re-check on resize too
 map.on('resize', () => {
   checkAndLoadLakes();
+  checkAndLoadTrails();
 });
 
 // initial load
 checkAndLoadLakes();
+checkAndLoadTrails();

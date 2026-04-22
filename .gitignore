@@ -5,3 +5,5 @@
 *.csv
 *.kml
 *.sqlite
+*.zip
+db/data/TRAN_Wyoming_State_GDB/
