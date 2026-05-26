@@ -7,3 +7,5 @@
 *.sqlite
 *.zip
 db/data/TRAN_Wyoming_State_GDB/
+db/data_scraper/**/*.json
+

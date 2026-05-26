@@ -1,0 +1,12 @@
+{
+    "species_abbreviations": [
+        {"abbreviation": "rt", "common_name": "rainbow trout", "scientific_name": "oncorhynchus mykiss"},
+        {"abbreviation": "br", "common_name": "brown trout", "scientific_name": "salmo trutta"},
+        {"abbreviation": "bk", "common_name": "brook trout", "scientific_name": "salvelinus fontinalis"},
+        {"abbreviation": "gt", "common_name": "golden trout", "scientific_name": "oncorhynchus mykiss aguabonita"},
+        {"abbreviation": "lt", "common_name": "lake trout", "scientific_name": "salvelinus namaycush"},
+        {"abbreviation": "ct", "common_name": "cutthroat trout", "scientific_name": "oncorhynchus clarki"},
+        {"abbreviation": "lct", "common_name": "lahontan cutthroat trout", "scientific_name": "oncorhynchus clarki henshawi"},
+        {"abbreviation": "trt", "common_name": "trout (unspecified)", "scientific_name": ""}
+    ]
+}
