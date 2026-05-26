@@ -1,8 +1,11 @@
 from flask import Flask, jsonify, request, send_from_directory, abort
 import os
+import sys
 import json
 from flask_cors import CORS
 
+# Add common folder to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'common'))
 import db_bridge
 
 app = Flask(__name__, static_folder='static', static_url_path='')

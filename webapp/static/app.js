@@ -79,7 +79,9 @@ function observationTableContent(props, obs){
 
 function bowPopupContent(props, obs){
     let content = `<div><strong>${props.name || 'Lake'}</strong>`;
-    content += ` Elevation: ${props.elevation || '?'}`
+    let elev_str = props.elevation ? `${props.elevation} ft` : 'N/A';
+    let area_str = props.area ? `${props.area} acres` : 'N/A';
+    content += ` Elevation: ${elev_str} ft , Area: ${area_str} acres `;
     if (activePopupState && activePopupState.id === props.id && activePopupState.latlng) {
       content += `<a href="https://forecast.weather.gov/MapClick.php?lon=${activePopupState.latlng.lng}&lat=${activePopupState.latlng.lat}" target="_blank">Go to Weather</a>`;
     }
@@ -400,7 +402,7 @@ function checkAndLoadLakes() {
           });
       } else {
         lakesLayer.clearLayers();
-        showMessage(`${count} lakes in view — zoom in or tighten filters to see individual lakes (<=50).`);
+        showMessage(`${count} lakes in view — zoom in or tighten filters to see individual lakes (<=100).`);
       }
     })
     .catch(err => {
