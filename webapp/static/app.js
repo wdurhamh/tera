@@ -6,6 +6,9 @@ L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapSe
   attribution: 'Tiles courtesy of the U.S. Geological Survey (USGS)'
 }).addTo(map);
 
+// Add geocoder control
+L.Control.geocoder().addTo(map);
+
 //some html constant strings
 const OBS_TABLE_HEADERS = `<div><strong>Date</strong></div>
                             <div><strong>Species</strong></div>
@@ -409,6 +412,44 @@ function checkAndLoadLakes() {
       console.error(err);
       showMessage('Error checking lakes count.');
     });
+}
+
+// Handle right-click to create new water body
+map.on('contextmenu', function(e) {
+  const latlng = e.latlng;
+  const name = prompt('Enter name for new body of water:', '');
+  if (name && name.trim()) {
+    createNewWaterBody(name.trim(), latlng);
+  }
+});
+
+function createNewWaterBody(name, latlng) {
+  const payload = {
+    name: name,
+    latitude: latlng.lat,
+    longitude: latlng.lng
+  };
+
+  fetch('/api/lakes/new_water', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  })
+  .then(r => {
+    if (!r.ok) throw new Error('Failed to create water body');
+    return r.json();
+  })
+  .then(data => {
+    console.log('Water body created:', data);
+    showMessage(`Created new water body: ${name}`);
+    checkAndLoadLakes(); // Reload lakes to show the new one
+  })
+  .catch(err => {
+    console.error('Error creating water body:', err);
+    alert('Error creating water body: ' + err.message);
+  });
 }
 
 document.getElementById('apply').addEventListener('click', () => {

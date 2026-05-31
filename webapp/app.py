@@ -17,6 +17,29 @@ def index():
     return send_from_directory(app.static_folder, 'index.html')
 
 
+@app.route('/api/lakes/new_water', methods=["POST"])
+def api_lakes_new_water():
+    data = request.get_json()
+    name = data.get('name')
+    latitude = data.get('latitude')
+    longitude = data.get('longitude')
+
+    if not all([name, latitude, longitude]):
+        abort(400, description='Missing required fields')
+
+    try:
+        # Insert new water body into the database
+        sql = "INSERT INTO water_bodies (name, nominal_coords) VALUES (%s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))"
+        params = (name, longitude, latitude)
+        result = db_bridge.execute_intsert(sql, params)
+        water_body_id = result[0]['id']
+    except Exception as e:
+        app.logger.exception('DB error')
+        abort(500, description=str(e))
+
+    return jsonify({'success': True, 'name': name}), 201
+
+
 @app.route('/api/lakes/count')
 def api_lakes_count():
     """Return lakes as a GeoJSON FeatureCollection.
