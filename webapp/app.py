@@ -32,7 +32,6 @@ def api_lakes_new_water():
         sql = "INSERT INTO water_bodies (name, nominal_coords) VALUES (%s, ST_SetSRID(ST_MakePoint(%s, %s), 4326))"
         params = (name, longitude, latitude)
         result = db_bridge.execute_intsert(sql, params)
-        water_body_id = result[0]['id']
     except Exception as e:
         app.logger.exception('DB error')
         abort(500, description=str(e))

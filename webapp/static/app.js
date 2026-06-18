@@ -9,6 +9,8 @@ if (MOCK) installMock();
 
 const map = L.map('map').setView([37.5, -119], 6);
 
+map.zoomControl.setPosition('topright');
+
 // USGS Topo tiles (National Map)
 L.tileLayer('https://basemap.nationalmap.gov/ArcGIS/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
   maxZoom: 20,
@@ -64,6 +66,10 @@ function renderList(features) {
     return;
   }
   const frag = document.createDocumentFragment();
+  const header_row = document.createElement('div');
+  header_row.className = 'list-header';
+  header_row.innerHTML = '<div class="name"><strong>Name</strong></div><div class="meta"><strong>Elevation</strong></div><div class="meta"><strong>Area</strong></div>';
+  frag.appendChild(header_row)
   features.forEach(f => {
     const p = f.properties || {};
     const row = document.createElement('div');
@@ -198,7 +204,7 @@ function findLayerById(id) {
 // ---------------------------------------------------------------------------
 const lakesLayer = L.geoJSON(null, {
   pointToLayer: (feature, latlng) => L.circleMarker(latlng, LAKE_STYLE),
-  style: { color: '#2b7ef7', weight: 1, fillOpacity: 0.4 },
+  style: { color: '#2b7ef7', weight: 1, fillOpacity: 0.7 },
   onEachFeature: (feature, layer) => {
     const props = feature.properties || {};
     layer.on('click', () => selectLake(props.id, { fly: false }));
@@ -320,6 +326,8 @@ function indexFeatures(fc) {
   });
 }
 
+const MAX_LIST_COUNT = 250;
+
 function checkAndLoadLakes() {
   const b = map.getBounds();
   const bbox = [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].join(',');
@@ -337,7 +345,7 @@ function checkAndLoadLakes() {
         lakesLayer.clearLayers(); lakeIndex.clear();
         setPanelStatus('0 waters');
         if (inList) showEmptyMessage('No waters in view (or matching filters).');
-      } else if (count <= 100) {
+      } else if (count <= MAX_LIST_COUNT) {
         if (inList) setPanelStatus(`<span class="spinner"></span>loading ${count}…`);
         fetch('/api/lakes' + params)
           .then(r => { if (!r.ok) throw new Error('Lakes request failed'); return r.json(); })
@@ -353,7 +361,7 @@ function checkAndLoadLakes() {
       } else {
         lakesLayer.clearLayers(); lakeIndex.clear();
         setPanelStatus(`${count} waters`);
-        if (inList) showEmptyMessage(`${count} waters in view — zoom in or tighten filters to list individual waters (≤100).`);
+        if (inList) showEmptyMessage(`${count} waters in view — zoom in or tighten filters to list individual waters (≤${MAX_LIST_COUNT}).`);
       }
     })
     .catch(err => { console.error(err); setPanelStatus('error'); if (inList) showEmptyMessage('Error checking waters count.'); });
